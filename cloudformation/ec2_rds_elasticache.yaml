@@ -1,0 +1,380 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: AWS CloudFormation template to set up EC2, RDS, ElastiCache, ALB, and NLB
+
+Parameters:
+  ACMSSLArn:
+    Type: String
+    Description: SSL certificate ARN for HTTPS listener
+  AgentDomainName:
+    Type: String
+    Description: Enter Domain Name for Agent    
+  ALBScheme:
+    Type: String
+    Description: Select the ALB scheme
+    AllowedValues:
+      - 'internet-facing'
+      - 'internal'
+  ALBSecurityGroup:
+    Type: AWS::EC2::SecurityGroup::Id
+    Description: Security group ID for ALB  
+  ALBSubnets:
+    Type: List<AWS::EC2::Subnet::Id>
+    Description: List of subnet IDs
+  ALBTargetGroupName:
+    Type: String
+    Description: Creat Target Group Name for ALB    
+  AppName:
+    Type: String
+    Description: Application name
+  EC2APPAMI:
+    Type: AWS::EC2::Image::Id
+    Default: ami-0b8414ae0d8d8b4cc
+    Description: AMI ID
+  EC2InstanceType:
+    Type: String
+    Default: r7i.xlarge
+    Description: EC2 instance type
+  EC2SecurityGroupId:
+    Type: AWS::EC2::SecurityGroup::Id
+    Description: Security group ID for EC2
+  EC2Subnets1:
+    Type: AWS::EC2::Subnet::Id
+    Description: List of subnet IDs
+  EC2Subnets2:
+    Type: AWS::EC2::Subnet::Id
+    Description: List of subnet IDs    
+  HostedZoneId:
+    Type: AWS::Route53::HostedZone::Id
+    Description: SELECET Hosted Zone ID for ALB
+  KeyPair:
+    Type: AWS::EC2::KeyPair::KeyName
+    Description: Key pair name for EC2 instance
+  NLBScheme:
+    Type: String
+    Description: Select the NLB scheme
+    AllowedValues: 
+      - 'internet-facing'
+      - 'internal'
+  NLBSecurityGroup:
+    Type: AWS::EC2::SecurityGroup::Id
+    Description: Security group ID for NLB
+  NLBSubnets:
+    Type: List<AWS::EC2::Subnet::Id>
+    Description: List of subnet IDs
+  NLBTargetGroupName:
+    Type: String
+    Description: Creat Target Group Name for NLB
+  DBPassword:
+    Type: String
+    NoEcho: true
+    Description: Database Password  
+  DBUsername:
+    Type: String
+    Description: Database username
+    Default: ryan
+  DomainName:
+    Type: String
+    Description: Enter Domain Name for service
+  RDSClusterParameterGroupName:
+    Type: String
+    Default: default.aurora-mysql8.0
+    Description: DB Cluster Parameter Group Name
+  RDSSubnetGroup:
+    Type: String
+    Description: Enter RDS subnet Group name
+    Default: default-vpc-8ebd22e5
+  RDSDatabaseInstance1AZ:
+    Type: AWS::EC2::AvailabilityZone::Name
+    Description: List of AvailabilityZone Name
+  RDSDatabaseInstance2AZ:
+    Type: AWS::EC2::AvailabilityZone::Name
+    Description: List of AvailabilityZone Name
+  RDSInstanceType:
+    Type: String
+    Default: db.r6g.large
+    AllowedValues:
+      - db.r6g.large
+    Description: Redis instance type
+  RDSSecurityGroupId:
+    Type: AWS::EC2::SecurityGroup::Id
+    Description: Security group ID for RDS
+  RedisInstanceType:
+    Type: String
+    Default: cache.r6g.large
+    Description: Redis instance type
+  RedisParameterGroupName:
+    Type: String
+    Default: default.redis7
+    Description: List of AvailabilityZone Name  
+  RedisSecurityGroupId:
+    Type: AWS::EC2::SecurityGroup::Id
+    Description: Security group ID for Redis
+  RedisSubnetGroup:
+    Type: String
+    Description: Enter Redis subnet Group name
+    Default: cftest
+  VPC:
+    Type: AWS::EC2::VPC::Id
+    Description: VPC ID
+Resources:
+ # IAM Role
+  EC2IAMRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ec2.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonRDSReadOnlyAccess
+        - arn:aws:iam::aws:policy/AmazonEC2ReadOnlyAccess
+        - arn:aws:iam::aws:policy/AmazonDynamoDBFullAccess
+        - arn:aws:iam::aws:policy/AmazonRedshiftReadOnlyAccess
+        - arn:aws:iam::aws:policy/AmazonAthenaFullAccess
+        - arn:aws:iam::aws:policy/AmazonElastiCacheFullAccess
+        - arn:aws:iam::aws:policy/AmazonS3FullAccess
+      Policies:
+        - PolicyName: InlineAssumeRolePolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: sts:AssumeRole
+                Resource: "*"        
+
+  # Instance Profile
+  EC2InstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Roles:
+        - !Ref EC2IAMRole
+
+  #  App Instance
+  EC2Instance1:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: !Ref EC2APPAMI # Amazon Linux 2 AMI
+      InstanceType: !Ref EC2InstanceType
+      KeyName: !Ref KeyPair
+      IamInstanceProfile: !Ref EC2InstanceProfile
+      BlockDeviceMappings:
+        - DeviceName: /dev/sdb
+          Ebs:
+            VolumeSize: 100
+      NetworkInterfaces:
+        - AssociatePublicIpAddress: true
+          DeviceIndex: '0'
+          GroupSet:
+            - !Ref EC2SecurityGroupId
+          SubnetId: !Ref EC2Subnets1
+      Tags:
+        - Key: Name
+          Value: 
+            Fn::Sub: "${AppName}-1"
+
+  EC2Instance2:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: !Ref EC2APPAMI # Amazon Linux 2 AMI
+      InstanceType: !Ref EC2InstanceType
+      KeyName: !Ref KeyPair
+      IamInstanceProfile: !Ref EC2InstanceProfile
+      BlockDeviceMappings:
+        - DeviceName: /dev/sdb
+          Ebs:
+            VolumeSize: 100
+      NetworkInterfaces:
+        - AssociatePublicIpAddress: true
+          DeviceIndex: '0'
+          GroupSet:
+            - !Ref EC2SecurityGroupId
+          SubnetId: !Ref EC2Subnets2
+      Tags:
+        - Key: Name
+          Value: 
+            Fn::Sub: "${AppName}-2"
+
+  # Aurora Cluster
+  RDSDatabase:
+    Type: AWS::RDS::DBCluster
+    Properties:
+      MasterUsername: !Ref DBUsername
+      MasterUserPassword: !Ref DBPassword
+      Engine: aurora-mysql
+      EngineVersion: 8.0.mysql_aurora.3.05.2
+      VpcSecurityGroupIds:
+        - !Ref RDSSecurityGroupId
+      DBSubnetGroupName: !Ref RDSSubnetGroup
+      StorageEncrypted: true
+      #KmsKeyId: !Ref RDSKmsKeyId
+      DBClusterParameterGroupName: !Ref RDSClusterParameterGroupName
+    #UpdateReplacePolicy: Retain
+    #DeletionPolicy: Snapshot
+
+  RDSDatabaseInstance1:
+    Type: AWS::RDS::DBInstance
+    Properties:
+      DBClusterIdentifier: !Ref RDSDatabase
+      DBInstanceClass: !Ref RDSInstanceType
+      Engine: aurora-mysql
+      PubliclyAccessible: false
+      AvailabilityZone: !Ref RDSDatabaseInstance1AZ
+      DBSubnetGroupName: !Ref RDSSubnetGroup
+      AutoMinorVersionUpgrade: true
+      Tags:
+        - Key: Name
+          Value: AuroraInstance1
+      
+
+  RDSDatabaseInstance2:
+    Type: AWS::RDS::DBInstance
+    Properties:
+      DBClusterIdentifier: !Ref RDSDatabase
+      DBInstanceClass: !Ref RDSInstanceType
+      Engine: aurora-mysql
+      PubliclyAccessible: false
+      AvailabilityZone: !Ref RDSDatabaseInstance2AZ
+      DBSubnetGroupName: !Ref RDSSubnetGroup
+      AutoMinorVersionUpgrade: true
+      Tags:
+        - Key: Name
+          Value: AuroraInstance2
+
+# ElastiCache for Redis
+  RedisReplicationGroup:
+    Type: AWS::ElastiCache::ReplicationGroup
+    Properties:
+      ReplicationGroupDescription: "Redis replication group with multi-AZ and replicas"
+      CacheParameterGroupName: !Ref RedisParameterGroupName
+      CacheNodeType: !Ref RedisInstanceType
+      Engine: redis
+      EngineVersion: "7.1"
+      CacheSubnetGroupName: !Ref RedisSubnetGroup
+      SecurityGroupIds:
+        - !Ref RedisSecurityGroupId
+      AutomaticFailoverEnabled: true
+      MultiAZEnabled: true
+      NumNodeGroups: 1
+      ReplicasPerNodeGroup: 2
+      ClusterMode: disabled     
+    #UpdateReplacePolicy: Retain
+    #DeletionPolicy: Retain
+
+  # Application Load Balancer
+  ApplicationLoadBalancer:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Scheme: !Ref ALBScheme
+      SecurityGroups:
+        - !Ref ALBSecurityGroup
+      Subnets: !Ref ALBSubnets
+      Type: application
+  
+  HTTPListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      DefaultActions: 
+        - Type: redirect
+          RedirectConfig:
+            Host: "#{host}"
+            Path: "/#{path}"
+            Protocol: "HTTPS"
+            Port: 443
+            StatusCode: HTTP_301
+      LoadBalancerArn: !Ref ApplicationLoadBalancer
+      Port: 80
+      Protocol: HTTP
+
+  HTTPSListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      Certificates:
+        - CertificateArn: !Ref ACMSSLArn
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref ALBTargetGroup
+      LoadBalancerArn: !Ref ApplicationLoadBalancer
+      Port: 443
+      Protocol: HTTPS
+      SslPolicy: ELBSecurityPolicy-TLS13-1-2-2021-06
+
+  ALBTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Name: !Ref ALBTargetGroupName
+      TargetType: instance
+      Port: 80
+      Protocol: HTTP
+      VpcId: !Ref VPC
+      HealthCheckPath: /
+      HealthCheckProtocol: HTTP
+      HealthCheckIntervalSeconds: 30
+      HealthCheckTimeoutSeconds: 5
+      HealthyThresholdCount: 5
+      UnhealthyThresholdCount: 2
+      Targets:
+        - Id: !Ref EC2Instance1
+        - Id: !Ref EC2Instance2
+      TargetGroupAttributes:
+        - Key: stickiness.enabled
+          Value: true
+
+  # Network Load Balancer  
+  NetworkLoadBalancer:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Scheme: !Ref NLBScheme
+      Subnets: !Ref NLBSubnets
+      SecurityGroups:
+        - !Ref NLBSecurityGroup     
+      Type: network
+
+  NLBListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref NLBTargetGroup
+      LoadBalancerArn: !Ref NetworkLoadBalancer
+      Port: 9000
+      Protocol: TCP
+
+  NLBTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Name: !Ref NLBTargetGroupName
+      TargetType: instance
+      VpcId: !Ref VPC
+      Port: 9000
+      Protocol: TCP
+      HealthCheckPort: 6000
+      HealthCheckProtocol: TCP
+      Targets:
+        - Id: !Ref EC2Instance1
+        - Id: !Ref EC2Instance2
+      TargetGroupAttributes:
+        - Key: stickiness.enabled
+          Value: true              
+  
+  ALBRecodeSet:
+   Type: AWS::Route53::RecordSet
+   Properties:
+      HostedZoneId: !Ref HostedZoneId
+      Name: !Ref DomainName
+      Type: CNAME
+      ResourceRecords:
+        - !GetAtt ApplicationLoadBalancer.DNSName
+      TTL: 300
+
+  NLBRecodeSet:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      HostedZoneId: !Ref HostedZoneId
+      Name: !Ref AgentDomainName
+      Type: CNAME
+      ResourceRecords:
+        - !GetAtt NetworkLoadBalancer.DNSName
+      TTL: 300

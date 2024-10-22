@@ -1,0 +1,50 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: RDS instance for CloudFormation stack
+
+Resources:
+  # Aurora Cluster
+  RDSDatabase:
+    Type: AWS::RDS::DBCluster
+    Properties:
+      MasterUsername: !Ref QuerypieDBUsername
+      MasterUserPassword: !Ref QuerypieDBPassword
+      Engine: aurora-mysql
+      EngineVersion: 8.0.mysql_aurora.3.05.2
+      VpcSecurityGroupIds:
+        - !Ref RDSSecurityGroupId
+      DBSubnetGroupName: !Ref RDSSubnetGroup
+      StorageEncrypted: true
+      #KmsKeyId: !Ref RDSKmsKeyId
+      DBClusterParameterGroupName: !Ref RDSClusterParameterGroupName
+    #UpdateReplacePolicy: Retain
+    #DeletionPolicy: Snapshot
+
+  # RDS Instance 1
+  RDSDatabaseInstance1:
+    Type: AWS::RDS::DBInstance
+    Properties:
+      DBClusterIdentifier: !Ref RDSDatabase
+      DBInstanceClass: !Ref RDSInstanceType
+      Engine: aurora-mysql
+      PubliclyAccessible: false
+      AvailabilityZone: !Ref RDSDatabaseInstance1AZ
+      DBSubnetGroupName: !Ref RDSSubnetGroup
+      AutoMinorVersionUpgrade: true
+      Tags:
+        - Key: Name
+          Value: AuroraInstance1
+      
+  # RDS Instance 2
+  RDSDatabaseInstance2:
+    Type: AWS::RDS::DBInstance
+    Properties:
+      DBClusterIdentifier: !Ref RDSDatabase
+      DBInstanceClass: !Ref RDSInstanceType
+      Engine: aurora-mysql
+      PubliclyAccessible: false
+      AvailabilityZone: !Ref RDSDatabaseInstance2AZ
+      DBSubnetGroupName: !Ref RDSSubnetGroup
+      AutoMinorVersionUpgrade: true
+      Tags:
+        - Key: Name
+          Value: AuroraInstance2

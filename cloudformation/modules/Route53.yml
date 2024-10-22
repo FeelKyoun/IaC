@@ -1,0 +1,23 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Route53 record sets for CloudFormation stack
+
+Resources:
+  ALBRecodeSet:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      HostedZoneId: !Ref HostedZoneId
+      Name: !Ref QuerypieDomainName
+      Type: CNAME
+      ResourceRecords:
+        - !GetAtt ApplicationLoadBalancer.DNSName
+      TTL: 300
+
+  NLBRecodeSet:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      HostedZoneId: !Ref HostedZoneId
+      Name: !Ref AgentDomainName
+      Type: CNAME
+      ResourceRecords:
+        - !GetAtt NetworkLoadBalancer.DNSName
+      TTL: 300

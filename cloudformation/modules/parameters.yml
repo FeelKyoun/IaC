@@ -1,0 +1,120 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Parameters for CloudFormation stack
+
+Parameters:
+  ACMSSLArn:
+    Type: String
+    Description: SSL certificate ARN for HTTPS listener
+  AgentDomainName:
+    Type: String
+    Description: Enter Domain Name for Agent    
+  ALBScheme:
+    Type: String
+    Description: Select the ALB scheme
+    AllowedValues:
+      - 'internet-facing'
+      - 'internal'
+  ALBSecurityGroup:
+    Type: AWS::EC2::SecurityGroup::Id
+    Description: Security group ID for ALB  
+  ALBSubnets:
+    Type: List<AWS::EC2::Subnet::Id>
+    Description: List of subnet IDs
+  ALBTargetGroupName:
+    Type: String
+    Description: Creat Target Group Name for ALB    
+  AppName:
+    Type: String
+    Default: App-1
+    Description: Application name
+  EC2APPAMI:
+    Type: AWS::EC2::Image::Id
+    Default: ami-0b8414ae0d8d8b4cc
+    Description: AMI ID
+  EC2InstanceType:
+    Type: String
+    Default: r7i.xlarge
+    Description: EC2 instance type
+  EC2SecurityGroupId:
+    Type: AWS::EC2::SecurityGroup::Id
+    Description: Security group ID for EC2
+  EC2Subnets:
+    Type: AWS::EC2::Subnet::Id
+    Description: List of subnet IDs
+  HostedZoneId:
+    Type: AWS::Route53::HostedZone::Id
+    Description: SELECET Hosted Zone ID for ALB
+  KeyPair:
+    Type: AWS::EC2::KeyPair::KeyName
+    Description: Key pair name for EC2 instance
+  NLBScheme:
+    Type: String
+    Description: Select the NLB scheme
+    AllowedValues: 
+      - 'internet-facing'
+      - 'internal'
+  NLBSecurityGroup:
+    Type: AWS::EC2::SecurityGroup::Id
+    Description: Security group ID for NLB
+  NLBSubnets:
+    Type: List<AWS::EC2::Subnet::Id>
+    Description: List of subnet IDs
+  NLBTargetGroupName:
+    Type: String
+    Description: Creat Target Group Name for NLB
+  DBPassword:
+    Type: String
+    NoEcho: true
+    Description: Database Password  
+  DBUsername:
+    Type: String
+    Description: Database username
+    Default: ryan
+  DomainName:
+    Type: String
+    Description: Enter Domain Name for service
+  RDSClusterParameterGroupName:
+    Type: String
+    Default: default.aurora-mysql8.0
+    Description: DB Cluster Parameter Group Name
+  RDSSubnetGroup:
+    Type: String
+    Description: Enter RDS subnet Group name
+    Default: default-vpc-8ebd22e5
+  RDSDatabaseInstance1AZ:
+    Type: AWS::EC2::AvailabilityZone::Name
+    Description: List of AvailabilityZone Name
+  RDSDatabaseInstance2AZ:
+    Type: AWS::EC2::AvailabilityZone::Name
+    Description: List of AvailabilityZone Name
+  RDSInstanceType:
+    Type: String
+    Default: db.r6g.large
+#    AllowedValues:
+#      - db.t2.micro
+#      - db.m5.large
+#      - db.r7g.large
+#      - db.t3.micro
+#      - db.m6g.large
+    Description: Redis instance type
+  RDSSecurityGroupId:
+    Type: AWS::EC2::SecurityGroup::Id
+    Description: Security group ID for RDS
+  RedisInstanceType:
+    Type: String
+    Default: cache.r6g.large
+    Description: Redis instance type
+  RedisParameterGroupName:
+    Type: String
+    Default: default.redis7
+    Description: List of AvailabilityZone Name  
+  RedisSecurityGroupId:
+    Type: AWS::EC2::SecurityGroup::Id
+    Description: Security group ID for Redis
+  RedisSubnetGroup:
+    Type: String
+    Description: Enter Redis subnet Group name
+    Default: cftest
+  VPC:
+    Type: AWS::EC2::VPC::Id
+    Description: VPC ID

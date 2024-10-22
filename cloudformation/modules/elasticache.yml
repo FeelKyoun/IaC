@@ -1,0 +1,23 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: ElastiCache instance for CloudFormation stack
+
+Resources:
+# ElastiCache for Redis
+  RedisReplicationGroup:
+    Type: AWS::ElastiCache::ReplicationGroup
+    Properties:
+      ReplicationGroupDescription: "Redis replication group with multi-AZ and replicas"
+      CacheParameterGroupName: !Ref RedisParameterGroupName
+      CacheNodeType: !Ref RedisInstanceType
+      Engine: redis
+      EngineVersion: "7.1"
+      CacheSubnetGroupName: !Ref RedisSubnetGroup
+      SecurityGroupIds:
+        - !Ref RedisSecurityGroupId
+      AutomaticFailoverEnabled: true
+      MultiAZEnabled: true
+      NumNodeGroups: 1
+      ReplicasPerNodeGroup: 2
+      ClusterMode: disabled     
+    #UpdateReplacePolicy: Retain
+    #DeletionPolicy: Retain
